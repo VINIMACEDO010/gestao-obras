@@ -27,6 +27,7 @@ RUN wget -qO /repo/rds-global-bundle.pem https://truststore.pki.rds.amazonaws.co
 
 FROM node:22-alpine
 ENV NODE_ENV=production
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-* /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg
 WORKDIR /app
 COPY --from=build --chmod=444 /repo/rds-global-bundle.pem /app/certs/rds-global-bundle.pem
 ENV DB_CA_FILE=/app/certs/rds-global-bundle.pem
