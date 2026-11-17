@@ -1,0 +1,1 @@
+{"root":["./src/api.ts","./src/auth.ts","./src/main.tsx","./src/util.tsx","./src/obra/Clientes.tsx","./src/obra/Compras.tsx","./src/obra/Cronograma.tsx","./src/obra/Diarios.tsx","./src/obra/Medicoes.tsx","./src/obra/Orcamento.tsx","./src/pages/Auditoria.tsx","./src/pages/DevLogin.tsx","./src/pages/Obra.tsx","./src/pages/Obras.tsx"],"version":"5.9.3"}

@@ -1,0 +1,75 @@
+# Mostra no pull request o que o Terraform vai mudar na AWS (papel somente leitura)
+name: Terraform plan
+
+on:
+  pull_request:
+    paths: ["infra/**"]
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  plano:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/main
+    env:
+      TF_VAR_email_alertas: ${{ vars.EMAIL_ALERTAS }}
+      TF_VAR_github_repositorio: ${{ github.repository }}
+      ARQ_VARS: ${{ vars.LEARNER_LAB == 'true' && '-var-file=learner-lab.tfvars' || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Credenciais por OIDC (somente leitura)
+        if: vars.AWS_PLAN_ROLE_ARN != ''
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+      - name: Credenciais temporárias do Learner Lab
+        if: vars.AWS_PLAN_ROLE_ARN == ''
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: "~1.10"
+          terraform_wrapper: false
+      - name: init
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=producao/terraform.tfstate" \
+            -backend-config="region=${{ vars.AWS_REGION || 'us-east-1' }}" \
+            -backend-config="encrypt=true" -backend-config="use_lockfile=true"
+      - name: Tag da imagem em produção (para o plano não mostrar troca de imagem)
+        id: tag
+        run: |
+          IMG=$(aws ecs describe-task-definition --task-definition gestao-obras-worker \
+            --query 'taskDefinition.containerDefinitions[0].image' --output text 2>/dev/null || echo ":inicial")
+          echo "tag=${IMG##*:}" >> "$GITHUB_OUTPUT"
+      - name: plan
+        id: plan
+        run: |
+          set -o pipefail
+          terraform plan -input=false -no-color -lock=false $ARQ_VARS -var "imagem_tag=${{ steps.tag.outputs.tag }}" | tee plano.txt
+      - name: Comenta o plano no PR
+        if: always()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            let plano = fs.existsSync('infra/main/plano.txt') ? fs.readFileSync('infra/main/plano.txt', 'utf8') : 'Plano não gerado';
+            const resumo = plano.split('\n').filter(l => /^Plan:|No changes/.test(l)).join('\n') || 'Veja o log do job';
+            if (plano.length > 60000) plano = plano.slice(-60000);
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
+              body: `### Terraform plan\n**${resumo}**\n<details><summary>Detalhes</summary>\n\n\`\`\`\n${plano}\n\`\`\`\n</details>`,
+            });

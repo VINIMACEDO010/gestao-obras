@@ -1,0 +1,10 @@
+email_alertas      = "seu.email@exemplo.com"
+github_repositorio = "seu-usuario/gestao-obras"
+
+# Opcional: domínio próprio com hosted zone no Route 53
+# dominio      = "obras.exemplo.com.br"
+# zona_route53 = "exemplo.com.br"
+
+# Para a apresentação (alta disponibilidade completa):
+# rds_multi_az       = true
+# endpoints_multi_az = true

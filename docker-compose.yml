@@ -1,0 +1,25 @@
+# Ambiente local: PostgreSQL + LocalStack (S3 e SQS simulados).
+# A API, o worker e o frontend rodam fora do Docker com "npm run dev" (veja o README).
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: obras
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+
+  localstack:
+    # Versão fixa da edição comunitária
+    image: localstack/localstack:4.4
+    environment:
+      SERVICES: s3,sqs
+    ports: ["4566:4566"]
+    volumes:
+      - ./dev/localstack-init.sh:/etc/localstack/init/ready.d/init.sh:ro
+
+volumes:
+  pgdata:
