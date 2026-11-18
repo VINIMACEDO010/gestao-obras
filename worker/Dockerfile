@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 #checkov:skip=CKV_DOCKER_2:Worker não expõe porta; o ECS reinicia a tarefa se o processo terminar
 # Build do worker. O contexto do build é a raiz do repositório.
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /repo
 COPY package.json package-lock.json ./
 # npm ci exige o package.json de todos os workspaces
@@ -14,7 +14,7 @@ RUN npm run build --workspace worker && npm prune --omit=dev --workspace worker
 # Certificados da AWS para TLS com verificação no RDS
 RUN wget -qO /repo/rds-global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
 
-FROM node:22-alpine
+FROM node:26-alpine
 ENV NODE_ENV=production
 # A imagem final só executa o Node: remove npm, npx, corepack e yarn, que vêm na imagem base
 # e não são usados em produção (menos superfície de ataque e menos vulnerabilidades)
