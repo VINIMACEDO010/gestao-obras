@@ -2,7 +2,7 @@
 # Build da API + frontend. O contexto do build é a raiz do repositório.
 
 # Frontend (React/Vite): só os arquivos estáticos vão para a imagem final
-FROM node:22-alpine AS web
+FROM node:26-alpine AS web
 WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY api/package.json api/
@@ -12,7 +12,7 @@ RUN npm ci --workspace web --include-workspace-root=false
 COPY web/ web/
 RUN npm run build --workspace web
 
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /repo
 COPY package.json package-lock.json ./
 # npm ci exige o package.json de todos os workspaces
@@ -25,7 +25,7 @@ RUN npm run build --workspace api && npm prune --omit=dev --workspace api
 # Certificados da AWS para TLS com verificação no RDS
 RUN wget -qO /repo/rds-global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
 
-FROM node:22-alpine
+FROM node:26-alpine
 ENV NODE_ENV=production
 # A imagem final só executa o Node: remove npm, npx, corepack e yarn, que vêm na imagem base
 # e não são usados em produção (menos superfície de ataque e menos vulnerabilidades)
