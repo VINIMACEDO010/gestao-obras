@@ -9,7 +9,8 @@ resource "aws_lb" "principal" {
   security_groups            = [aws_security_group.alb.id]
   drop_invalid_header_fields = true
   enable_deletion_protection = var.protecao_exclusao
-  desync_mitigation_mode     = "defensive"
+  # "defensive" é o padrão da AWS. O "strictest" recusa com 400 as requisições do API Gateway via VPC Link.
+  desync_mitigation_mode = "defensive"
 
   access_logs {
     bucket  = local.bucket["logs"].bucket

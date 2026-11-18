@@ -222,7 +222,7 @@ resource "aws_wafv2_web_acl_association" "alb" {
 }
 
 resource "aws_wafv2_web_acl_association" "cognito" {
-  resource_arn = aws_cognito_user_pool.usuarios.arn
+  resource_arn = local.cognito_pool_arn
   web_acl_arn  = aws_wafv2_web_acl.cognito.arn
 }
 
@@ -231,7 +231,7 @@ resource "aws_cloudwatch_log_group" "waf" {
   for_each          = { aplicacao = aws_wafv2_web_acl.alb.arn, login = aws_wafv2_web_acl.cognito.arn }
   name              = "aws-waf-logs-${local.nome}-${each.key}"
   retention_in_days = 365
-  kms_key_id        = aws_kms_key.principal.arn
+  kms_key_id        = local.kms_arn
 }
 
 resource "aws_cloudwatch_log_resource_policy" "waf" {

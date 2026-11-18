@@ -2,7 +2,7 @@
 resource "aws_sqs_queue" "dlq" {
   name                              = "${local.nome}-jobs-dlq"
   message_retention_seconds         = 1209600
-  kms_master_key_id                 = aws_kms_key.principal.arn
+  kms_master_key_id                 = local.kms_arn
   kms_data_key_reuse_period_seconds = 3600
 }
 
@@ -11,7 +11,7 @@ resource "aws_sqs_queue" "jobs" {
   visibility_timeout_seconds        = 180
   message_retention_seconds         = 345600
   receive_wait_time_seconds         = 20
-  kms_master_key_id                 = aws_kms_key.principal.arn
+  kms_master_key_id                 = local.kms_arn
   kms_data_key_reuse_period_seconds = 3600
   # Depois de 3 falhas a mensagem vai para a DLQ (spec 006 RS06)
   redrive_policy = jsonencode({

@@ -34,7 +34,7 @@ resource "aws_apigatewayv2_route" "tudo" {
 resource "aws_cloudwatch_log_group" "apigateway" {
   name              = "/apigateway/${local.nome}"
   retention_in_days = 365
-  kms_key_id        = aws_kms_key.principal.arn
+  kms_key_id        = local.kms_arn
 }
 
 resource "aws_apigatewayv2_stage" "padrao" {

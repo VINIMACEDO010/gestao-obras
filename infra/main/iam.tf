@@ -48,7 +48,7 @@ resource "aws_iam_role_policy" "execucao_segredo" {
       {
         Effect   = "Allow"
         Action   = ["kms:Decrypt"]
-        Resource = aws_kms_key.principal.arn
+        Resource = local.kms_arn
       },
     ]
   })
@@ -70,7 +70,7 @@ resource "aws_iam_role_policy" "api" {
       # PutObject é usado na assinatura do POST pré-assinado; GetObject nos links temporários
       { Effect = "Allow", Action = ["s3:PutObject", "s3:GetObject"], Resource = "${local.docs_arn}/*" },
       { Effect = "Allow", Action = "sqs:SendMessage", Resource = aws_sqs_queue.jobs.arn },
-      { Effect = "Allow", Action = ["kms:GenerateDataKey", "kms:Decrypt"], Resource = aws_kms_key.principal.arn },
+      { Effect = "Allow", Action = ["kms:GenerateDataKey", "kms:Decrypt"], Resource = local.kms_arn },
     ]
   })
 }
@@ -94,7 +94,7 @@ resource "aws_iam_role_policy" "worker" {
         Action   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:ChangeMessageVisibility", "sqs:GetQueueAttributes"]
         Resource = aws_sqs_queue.jobs.arn
       },
-      { Effect = "Allow", Action = ["kms:GenerateDataKey", "kms:Decrypt"], Resource = aws_kms_key.principal.arn },
+      { Effect = "Allow", Action = ["kms:GenerateDataKey", "kms:Decrypt"], Resource = local.kms_arn },
     ]
   })
 }

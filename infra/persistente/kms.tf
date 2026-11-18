@@ -1,9 +1,11 @@
-# Chave KMS do projeto (rotação anual automática). Usada em RDS, S3 de documentos,
-# SQS, ECR, CloudWatch Logs, CloudTrail, SNS e no segredo do RDS.
+# Chave KMS do projeto (rotação anual automática). Usada em RDS, snapshots, S3 de documentos,
+# SQS, ECR, CloudWatch Logs, CloudTrail, SNS e nos segredos.
+# Fica na camada persistente: se fosse apagada junto com o ambiente, os snapshots do banco
+# e as fotos já gravadas ficariam ilegíveis e a recuperação de desastre seria impossível.
 resource "aws_kms_key" "principal" {
   description             = "Chave de dados do ${local.nome}"
   enable_key_rotation     = true
-  deletion_window_in_days = 7
+  deletion_window_in_days = 30
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [

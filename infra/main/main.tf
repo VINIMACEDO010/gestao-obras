@@ -18,3 +18,24 @@ locals {
 
   porta_api = 3000
 }
+
+# ---------------------------------------------------------------------------
+# Camada persistente (infra/persistente): chave KMS e identidade (Cognito).
+# Não é apagada no terraform destroy deste diretório, o que permite recuperar
+# o ambiente a partir dos snapshots do banco (plano de DR em docs/).
+# ---------------------------------------------------------------------------
+data "terraform_remote_state" "persistente" {
+  backend = "s3"
+  config = {
+    bucket = var.estado_bucket != "" ? var.estado_bucket : "${var.projeto}-tfstate-${data.aws_caller_identity.atual.account_id}"
+    key    = "persistente/terraform.tfstate"
+    region = var.regiao
+  }
+}
+
+locals {
+  kms_arn             = data.terraform_remote_state.persistente.outputs.kms_arn
+  cognito_pool_id     = data.terraform_remote_state.persistente.outputs.cognito_user_pool_id
+  cognito_pool_arn    = data.terraform_remote_state.persistente.outputs.cognito_user_pool_arn
+  cognito_dominio_url = data.terraform_remote_state.persistente.outputs.cognito_dominio_url
+}

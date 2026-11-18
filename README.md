@@ -8,7 +8,7 @@ SaaS para construtoras controlarem orçamento, cronograma, compras, diário de o
 |---|---|
 | Código no GitHub com SAST (SonarQube) | `.github/workflows/ci.yml` (job `sast`), `sonar-project.properties` |
 | Desenvolvimento seguro com SDD | `specs/` (uma spec por funcionalidade, com requisitos de segurança ASVS e modelo STRIDE) |
-| Infraestrutura com Terraform | `infra/main` (estado remoto em S3 criado por `infra/bootstrap`) |
+| Infraestrutura com Terraform (plano de DR) | `infra/persistente` e `infra/main`; plano em [`docs/plano-de-recuperacao-de-desastres.md`](docs/plano-de-recuperacao-de-desastres.md) |
 | WAF camada 7 | `infra/main/waf.tf` (WAF no ALB, que recebe todo o tráfego da aplicação, e WAF no login do Cognito) |
 | Isolamento de rede | `infra/main/network.tf`, `security_groups.tf`, `endpoints.tf` |
 | Aplicação funcional | `api/`, `worker/`, `web/` |
@@ -51,7 +51,8 @@ specs/          Especificações (SDD), modelo de ameaças e matriz de permissõ
 api/            API Node.js + TypeScript (Fastify), migrações SQL e testes
 worker/         Consumidor da fila: valida fotos (magic bytes) e gera PDFs
 web/            Frontend React + Vite (PWA para uso no canteiro)
-infra/          Terraform (bootstrap do estado + infraestrutura principal)
+infra/          Terraform: bootstrap do estado, camada persistente (KMS e Cognito) e ambiente recriável
+docs/           Plano de recuperação de desastres
 scripts/        Cadastro de construtora e de usuários em produção
 .github/        Pipelines de CI, plano do Terraform e deploy
 ```
@@ -96,11 +97,22 @@ terraform init && terraform apply
 
 Anote a saída `bucket_estado`.
 
-### 2. Primeiro apply (na sua máquina, com usuário administrador)
+### 2. Camada persistente (uma vez)
+
+Chave KMS e Cognito ficam separados do resto, para sobreviverem a um `terraform destroy` do ambiente e permitirem a recuperação de desastres.
 
 ```bash
 cd infra/main
 cp backend.hcl.example backend.hcl            # coloque o bucket do passo 1
+cd ../persistente
+terraform init -backend-config=../main/backend.hcl -backend-config=key=persistente/terraform.tfstate
+terraform apply
+```
+
+### 2.1 Ambiente (na sua máquina, com usuário administrador)
+
+```bash
+cd infra/main
 cp terraform.tfvars.example terraform.tfvars  # seu e-mail e o repositório GitHub
 terraform init -backend-config=backend.hcl
 terraform apply
@@ -158,11 +170,28 @@ O que não muda: VPC isolada, API Gateway, WAF, Cognito com MFA, KMS, RLS no ban
 
 Diferenças na operação:
 
+- Aplique a camada persistente (`infra/persistente`) antes do ambiente, com os mesmos comandos do passo 2. Ela não usa o `learner-lab.tfvars`.
 - Não use o `infra/bootstrap`. A política do laboratório bloqueia leituras que o Terraform faz em buckets S3, então os quatro buckets (estado, site, documentos e logs) são criados pelo script `scripts/criar-buckets-learner-lab.ps1`, e o Terraform gerencia só as configurações deles.
 - Use sempre `-var-file=learner-lab.tfvars` no `terraform plan/apply/destroy`.
 - As credenciais vêm de **AWS Details > AWS CLI: Show** no laboratório e valem só durante a sessão (cerca de 4 horas). Cole em `~/.aws/credentials` antes de usar o Terraform.
 - No GitHub, em vez de `AWS_DEPLOY_ROLE_ARN` e `AWS_PLAN_ROLE_ARN`, crie a variável `LEARNER_LAB = true` e os secrets `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` e `AWS_SESSION_TOKEN`. Atualize os três a cada nova sessão do laboratório, antes de rodar o deploy.
 - O crédito do laboratório é fixo. Rode `terraform destroy -var-file=learner-lab.tfvars` sempre que não estiver usando.
+
+## Recuperação de desastres
+
+Resumo do [plano completo](docs/plano-de-recuperacao-de-desastres.md):
+
+- **RTO de 1 hora**: o Terraform recria o ambiente inteiro e o pipeline publica a aplicação.
+- **RPO zero** num destroy controlado (snapshot final automático) e de até 5 minutos numa falha do banco (backups com restauração para um ponto no tempo, mantidos por 7 dias).
+- Chave KMS e Cognito ficam na camada persistente: depois da recuperação os usuários entram com a mesma senha e MFA, e as fotos antigas continuam legíveis.
+
+Recuperar o ambiente com os dados:
+
+```bash
+aws rds describe-db-snapshots --query "reverse(sort_by(DBSnapshots,&SnapshotCreateTime))[].DBSnapshotIdentifier"
+cd infra/main
+terraform apply -var-file=learner-lab.tfvars -var=restaurar_snapshot=gestao-obras-final-AAAAMMDD-hhmm
+```
 
 ## Demonstrações de segurança para a apresentação
 

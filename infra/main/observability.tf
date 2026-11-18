@@ -9,7 +9,7 @@ resource "aws_cloudtrail" "conta" {
   is_multi_region_trail         = true
   include_global_service_events = true
   enable_log_file_validation    = true
-  kms_key_id                    = aws_kms_key.principal.arn
+  kms_key_id                    = local.kms_arn
   depends_on                    = [aws_s3_bucket_policy.logs]
 }
 
@@ -21,7 +21,7 @@ resource "aws_guardduty_detector" "conta" {
 
 resource "aws_sns_topic" "alertas" {
   name              = "${local.nome}-alertas"
-  kms_master_key_id = aws_kms_key.principal.arn
+  kms_master_key_id = local.kms_arn
 }
 
 resource "aws_sns_topic_subscription" "email" {

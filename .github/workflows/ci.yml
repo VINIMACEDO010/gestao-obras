@@ -128,7 +128,10 @@ jobs:
         with:
           terraform_version: "~1.10"
       - run: terraform fmt -check -recursive infra
-      - name: terraform validate
+      - name: terraform validate (camada persistente)
+        working-directory: infra/persistente
+        run: terraform init -backend=false -input=false && terraform validate
+      - name: terraform validate (ambiente)
         working-directory: infra/main
         run: terraform init -backend=false -input=false && terraform validate
       - name: Testes do Terraform (conta normal e Learner Lab, com providers simulados)

@@ -9,7 +9,7 @@ resource "aws_ecr_repository" "img" {
   }
   encryption_configuration {
     encryption_type = "KMS"
-    kms_key         = aws_kms_key.principal.arn
+    kms_key         = local.kms_arn
   }
 }
 

@@ -10,7 +10,7 @@ resource "aws_cloudwatch_log_group" "ecs" {
   for_each          = toset(["api", "worker"])
   name              = "/ecs/${local.nome}/${each.key}"
   retention_in_days = 365
-  kms_key_id        = aws_kms_key.principal.arn
+  kms_key_id        = local.kms_arn
 }
 
 locals {
@@ -28,7 +28,7 @@ locals {
     { name = "DB_IAM_AUTH", value = tostring(local.db_auth_iam) },
     { name = "DB_SSL", value = "true" },
     { name = "DOCS_BUCKET", value = local.bucket["documentos"].bucket },
-    { name = "DOCS_KMS_KEY_ID", value = aws_kms_key.principal.arn },
+    { name = "DOCS_KMS_KEY_ID", value = local.kms_arn },
     { name = "JOBS_QUEUE_URL", value = aws_sqs_queue.jobs.url },
   ]
 
@@ -88,7 +88,7 @@ resource "aws_ecs_task_definition" "api" {
       environment = concat(local.env_comum, [
         { name = "PORT", value = tostring(local.porta_api) },
         { name = "AUTH_MODE", value = "cognito" },
-        { name = "COGNITO_USER_POOL_ID", value = aws_cognito_user_pool.usuarios.id },
+        { name = "COGNITO_USER_POOL_ID", value = local.cognito_pool_id },
         { name = "COGNITO_CLIENT_ID", value = aws_cognito_user_pool_client.web.id },
         { name = "COGNITO_JWKS", value = data.http.jwks.response_body },
         { name = "COGNITO_DOMAIN", value = local.cognito_dominio_url },

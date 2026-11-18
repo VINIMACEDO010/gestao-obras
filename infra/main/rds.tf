@@ -43,14 +43,14 @@ resource "aws_db_instance" "principal" {
   # Só a migração usa; API e worker entram com token IAM (usuário app_user, sem senha).
   username                            = "obras_admin"
   manage_master_user_password         = true
-  master_user_secret_kms_key_id       = aws_kms_key.principal.arn
+  master_user_secret_kms_key_id       = local.kms_arn
   iam_database_authentication_enabled = true
 
   allocated_storage     = 20
   max_allocated_storage = 50
   storage_type          = var.rds_tipo_disco
   storage_encrypted     = true
-  kms_key_id            = aws_kms_key.principal.arn
+  kms_key_id            = local.kms_arn
 
   db_subnet_group_name   = aws_db_subnet_group.dados.name
   vpc_security_group_ids = [aws_security_group.rds.id]
@@ -59,14 +59,27 @@ resource "aws_db_instance" "principal" {
   parameter_group_name   = aws_db_parameter_group.postgres.name
   ca_cert_identifier     = "rds-ca-rsa2048-g1"
 
-  backup_retention_period         = 7
-  copy_tags_to_snapshot           = true
-  deletion_protection             = var.protecao_exclusao
-  skip_final_snapshot             = !var.protecao_exclusao
-  final_snapshot_identifier       = "${local.nome}-final"
+  backup_retention_period = 7
+  copy_tags_to_snapshot   = true
+  deletion_protection     = var.protecao_exclusao
+
+  # Recuperação de desastre (docs/plano-de-recuperacao-de-desastres.md):
+  # - todo destroy guarda um snapshot final com data e hora no nome;
+  # - os backups automáticos (restauração até um ponto no tempo) continuam guardados;
+  # - com restaurar_snapshot preenchido, o banco nasce a partir do snapshot, com os dados.
+  skip_final_snapshot             = false
+  final_snapshot_identifier       = "${local.nome}-final-${formatdate("YYYYMMDD-hhmm", timestamp())}"
+  delete_automated_backups        = false
+  snapshot_identifier             = var.restaurar_snapshot != "" ? var.restaurar_snapshot : null
   auto_minor_version_upgrade      = true
   enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
   apply_immediately               = true
+
+  lifecycle {
+    # O nome do snapshot final é fixado na criação; e depois de restaurado o banco
+    # não deve ser recriado só porque a variável voltou a ficar vazia.
+    ignore_changes = [final_snapshot_identifier, snapshot_identifier]
+  }
 }
 
 locals {
@@ -86,7 +99,7 @@ resource "aws_secretsmanager_secret" "app_db" {
   count                   = local.db_auth_iam ? 0 : 1
   name                    = "${local.nome}/app-db-senha"
   description             = "Senha do usuário app_user do PostgreSQL"
-  kms_key_id              = aws_kms_key.principal.arn
+  kms_key_id              = local.kms_arn
   recovery_window_in_days = 0
 }
 

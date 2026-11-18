@@ -117,3 +117,18 @@ variable "criar_buckets" {
   type        = bool
   default     = true
 }
+
+variable "estado_bucket" {
+  description = "Bucket do estado do Terraform. Vazio usa o padrão gestao-obras-tfstate-<conta>."
+  type        = string
+  default     = ""
+}
+
+variable "restaurar_snapshot" {
+  description = <<-EOT
+    Recuperação de desastre: nome de um snapshot do RDS para recriar o banco com os dados.
+    Vazio cria um banco novo. Liste os snapshots com: aws rds describe-db-snapshots
+  EOT
+  type        = string
+  default     = ""
+}

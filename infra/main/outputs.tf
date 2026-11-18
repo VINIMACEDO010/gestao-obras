@@ -19,7 +19,7 @@ output "cluster_ecs" {
 }
 
 output "cognito_user_pool_id" {
-  value = aws_cognito_user_pool.usuarios.id
+  value = local.cognito_pool_id
 }
 
 # Configuração de login (o frontend busca em /api/config)

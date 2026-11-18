@@ -84,9 +84,44 @@ mock_provider "http" {
 }
 mock_provider "random" {}
 
+# Saídas simuladas da camada persistente (infra/persistente)
+override_data {
+  target = data.terraform_remote_state.persistente
+  values = {
+    outputs = {
+      kms_arn               = "arn:aws:kms:us-east-1:123456789012:key/persistente"
+      cognito_user_pool_id  = "us-east-1_X"
+      cognito_user_pool_arn = "arn:aws:cognito-idp:us-east-1:123456789012:userpool/us-east-1_X"
+      cognito_dominio_url   = "https://gestao-obras-teste.auth.us-east-1.amazoncognito.com"
+    }
+  }
+}
+
 variables {
   email_alertas      = "teste@exemplo.com"
   github_repositorio = "teste/gestao-obras"
+}
+
+# Executado primeiro: os runs compartilham o estado, e depois de criado o banco ignora
+# mudanças em snapshot_identifier (proteção contra recriação acidental).
+run "recuperacao_de_desastre" {
+  command = apply
+  variables {
+    learner_lab         = true
+    rds_tipo_disco      = "gp2"
+    habilitar_guardduty = false
+    habilitar_orcamento = false
+    criar_buckets       = false
+    restaurar_snapshot  = "gestao-obras-final-20261118-1000"
+  }
+  assert {
+    condition     = aws_db_instance.principal.snapshot_identifier == "gestao-obras-final-20261118-1000"
+    error_message = "DR: o banco deve ser recriado a partir do snapshot informado"
+  }
+  assert {
+    condition     = aws_cognito_user_pool_client.web.user_pool_id == "us-east-1_X"
+    error_message = "DR: o app client usa o user pool persistente (usuários preservados)"
+  }
 }
 
 run "learner_lab" {
@@ -126,6 +161,18 @@ run "learner_lab" {
 
 run "conta_normal" {
   command = apply
+  assert {
+    condition     = aws_db_instance.principal.skip_final_snapshot == false && aws_db_instance.principal.delete_automated_backups == false
+    error_message = "DR: o destroy precisa guardar snapshot final e backups automáticos"
+  }
+  assert {
+    condition     = startswith(aws_db_instance.principal.final_snapshot_identifier, "gestao-obras-final-")
+    error_message = "DR: snapshot final com data e hora no nome"
+  }
+  assert {
+    condition     = aws_db_instance.principal.kms_key_id == "arn:aws:kms:us-east-1:123456789012:key/persistente"
+    error_message = "DR: o banco usa a chave KMS da camada persistente"
+  }
   assert {
     condition     = aws_lb.principal.internal == true
     error_message = "O ALB precisa ser interno (sem acesso direto da internet)"
