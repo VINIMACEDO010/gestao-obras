@@ -26,9 +26,9 @@ A arquitetura da primeira entrega previa CloudFront, Route 53 e subnets pública
 
 ## Evidências
 
+- Demonstração ao vivo na apresentação: o sistema rodando na AWS, incluindo o WAF bloqueando SQL injection com erro 403.
 - `docs/evidencias/sistema/`: telas do sistema funcionando (escritório, canteiro no celular, cliente, isolamento entre empresas, auditoria e PDF da medição).
-- `docs/evidencias/pipeline/`: execuções do GitHub Actions e análise do SonarQube Cloud.
-- `docs/evidencias/aws/`: ambiente na AWS e WAF bloqueando SQL injection com erro 403.
+- Execuções do pipeline: aba Actions do repositório e projeto `VINIMACEDO010_gestao-obras` no SonarQube Cloud.
 
 ## Como executar
 
