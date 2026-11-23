@@ -2,6 +2,8 @@
 
 SaaS para construtoras controlarem orçamento, cronograma, compras, diário de obra com fotos e medições, com acompanhamento pelo cliente da obra. Roda na AWS com foco em desenvolvimento seguro.
 
+> **Entrega do trabalho:** o mapa completo de requisitos, o diagrama de arquitetura e as evidências estão em [`docs/ENTREGA.md`](docs/ENTREGA.md).
+
 ## Onde cada requisito do trabalho está
 
 | Requisito | Onde |
