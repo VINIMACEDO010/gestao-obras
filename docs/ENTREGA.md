@@ -20,7 +20,7 @@ O Sistema de Gestão de Obras é um SaaS multiempresa para construtoras. Ele re�
 
 ## Arquitetura
 
-O diagrama atualizado está em `docs/arquitetura/arquitetura-gestao-obras.drawio` (abre no diagrams.net).
+O diagrama atualizado está em `docs/arquitetura/arquitetura-gestao-obras.pdf`; a versão editável é `docs/arquitetura/arquitetura-gestao-obras.drawio` (abre no diagrams.net).
 
 A arquitetura da primeira entrega previa CloudFront, Route 53 e subnets públicas com o ALB exposto. O ambiente AWS Academy Learner Lab bloqueia CloudFront, Route 53 e a criação de roles IAM. Por isso, a entrada HTTPS passou para o API Gateway, ligado por VPC Link a um ALB interno protegido por WAF regional. Com isso a VPC ficou sem nenhum recurso público, o que reduz a superfície de ataque em relação ao desenho original.
 
